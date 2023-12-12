@@ -22,3 +22,19 @@ When the `.Renviron` file opens paste this into it.
 ```
 PATH = "/usr/bin:/srv/conda/envs/notebook/bin:/srv/conda/condabin:/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin:/bin:/usr/local/texlive/bin/linux:/usr/local/texlive/bin/linux:/usr/lib/rstudio-server/bin/quarto/bin:/usr/lib/rstudio-server/bin/postback/postback:/usr/bin:/usr/bin:/usr/bin:"
 ```
+
+## Convert ipynb to qmd
+
+You will need to edit the yaml at the top.
+
+```
+format:
+  html:
+    code-fold: true
+```
+
+```
+input <- "tutorials/Earthdata_Search_Discovery_earthaccess.ipynb"
+filename <- "tutorials/Earthdata_Search_Discovery"
+rmarkdown::convert_ipynb(input, output = xfun::with_ext(filename, "qmd"))
+```

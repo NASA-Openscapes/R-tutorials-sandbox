@@ -1,0 +1,244 @@
+---
+title: Earthdata Search and Discovery
+format:
+  html:
+    code-fold: true
+---
+
+
+## Summary
+
+In this example we will use the `earthaccess` library to search for data collections from NASA Earthdata. `earthaccess` is a Python library that simplifies data discovery and access to NASA Earth science data by providing an abstraction layer for NASA’s [Common Metadata Repository (CMR) API](https://cmr.earthdata.nasa.gov/search/site/docs/search/api.html) Search API. The library makes searching for data more approachable by using a simpler notation instead of low level HTTP queries. `earthaccess` takes the trouble out of Earthdata Login **authentication**, makes **search** easier, and provides a stream-line way to download or stream search results into an `xarray` object.
+
+For more on `earthaccess` visit the [`earthaccess` GitHub](https://github.com/nsidc/earthaccess) page and/or the [`earthaccess` documentation](https://earthaccess.readthedocs.io/en/latest/) site. Be aware that `earthaccess` is under active development. 
+
+## Prerequisites
+
+An Earthdata Login account is required to access data from NASA Earthdata. Please visit <https://urs.earthdata.nasa.gov> to register and manage your Earthdata Login account. This account is free to create and only takes a moment to set up.  
+
+
+## Learning Objectives
+
+1. How to authenticate with `earthaccess`
+2. How to use `earthaccess` to search for data using spatial and temporal filters
+3. How to explore and work with search results
+
+## Get Started
+
+### Import Required Packages  
+
+```{python}
+import earthaccess 
+from pprint import pprint
+import xarray as xr
+import geopandas as gpd
+```
+
+### Authentication for NASA Earthdata  
+
+We will start by authenticating using our Earthdata Login credentials. Authentication is not necessarily needed to search for publicaly available data collections in Earthdata, but is always need to download or access data from the NASA Earthdata archives. We can use `login` method from the `earthaccess` library here. This will create a authenticated session using our Earthdata Login credential. Our credentials can be passed along via **environmental variables** or by a **.netrc** file save in the home/user profile directory. If your credentials are not available in either location, we will be prompt to input our credentials and a **.netrc** will be created and saved for us.  
+
+```{python}
+auth = earthaccess.login()
+# are we authenticated?
+if not auth.authenticated:
+    # ask for credentials and persist them in a .netrc file
+    auth.login(strategy="interactive", persist=True)
+```
+
+### Search for data  
+
+There are multiple keywords we can use to discovery data from collections. The table below contains the `short_name`, `concept_id`, and `doi` for some collections we are interested in for other exercises. Each of these can be 
+used to search for data or information related to the collection we are interested in.  
+
+| Shortname | Collection Concept ID | DOI |
+| --- | --- | --- |
+| GPM_3IMERGDF | C2723754864-GES_DISC | 10.5067/GPM/IMERGDF/DAY/07 |
+| MOD10C1 | C1646609808-NSIDC_ECS | 10.5067/MODIS/MOD10C1.061 |
+| SPL4SMGP | C2531308461-NSIDC_ECS | 10.5067/EVKPQZ4AFC4D | 
+| SPL4SMAU | C2537927247-NSIDC_ECS | 10.5067/LWJ6TF5SZRG3 |
+
+But wait...You may be asking "how can we find the `shortname`, `concept_id`, and `doi` for collections not in the table above?". Let's take a quick detour.
+
+https://search.earthdata.nasa.gov/search?q=GPM_3IMERGDF
+
+#### Search by collection
+
+```{python}
+collection_id = 'C2723754864-GES_DISC'
+```
+
+```{python}
+results = earthaccess.search_data(
+    concept_id = collection_id,
+    cloud_hosted = True,
+    count = 10    # Restricting to 10 records returned
+)
+```
+
+In this example we used the `concept_id` parameter to search from our desired collection. However, there are multiple ways to specify the collection(s) we are interested in. Alternative parameters include:  
+
+- `doi` - request collection by digital object identifier (e.g., `doi` = '10.5067/GPM/IMERGDF/DAY/07')  
+- `short_name` - request collection by CMR shortname (e.g., `short_name` = 'GPM_3IMERGDF')  
+
+**NOTE:** Each Earthdata collect has a unique `concept_id` and `doi`. This is not the case with `short_name`. A **shortname** can be associated with multiple versions of a collection. If multiple versions of a collection are publicaly available, using the `short_name` parameter with return all versions available. It is advised to use the `version` parameter in conjunction with the `short_name` parameter with searching.
+
+We can refine our search by passing more parameters that describe the spatiotemporal domain of our use case. Here, we use the `temporal` parameter to request a date range and the `bounding_box` parameter to request granules that intersect with a bounding box.  
+
+For our bounding box, we are going to read in a GeoJSON file containing a single feature and extract the coordinate pairs for the southeast corner and the northwest corner (or lowerleft and upperright corners) of the bounding box around the feature.  
+
+```{python}
+inGeojson = gpd.read_file('../../2023-Cloud-Workshop-AGU/data/sf_to_sierranvmt.geojson')
+```
+
+```{python}
+xmin, ymin, xmax, ymax = inGeojson.total_bounds
+```
+
+We will assign our start date and end date to a variable named `date_range` and we'll assign the southeast and the northwest corner coordinates to a variable named `bbox` to be passed to our `earthaccess` search request.  
+
+```{python}
+date_range = ("2022-11-19", "2023-04-06")
+#bbox = (-127.0761, 31.6444, -113.9039, 42.6310)
+bbox = (xmin, ymin, xmax, ymax)
+```
+
+```{python}
+results = earthaccess.search_data(
+    concept_id = collection_id,
+    cloud_hosted = True,
+    temporal = date_range,
+    bounding_box = bbox,
+)
+```
+
+- The `short_name` and `concept_id` search parameters can be used to request one or multiple collections per request, but the `doi` parameter can only request a single collection.  
+> `concept_ids` = ['C2723754864-GES_DISC', 'C1646609808-NSIDC_ECS']   
+- Use the `cloud_hosted` search parameter only to search for data assets available from NASA's Earthdata Cloud.
+- There are even more search parameters that can be passed to help refine our search, however those parameters do have to be populated in the CMR record to be leveraged. A non exhaustive list of examples are below:  
+    - `day_night_flag = 'day'`  
+    - `cloud_cover = (0, 10)`  
+
+```{python}
+# col_ids = ['C2723754864-GES_DISC', 'C1646609808-NSIDC_ECS', 'C2531308461-NSIDC_ECS', 'C2537927247-NSIDC_ECS']    # Specify a list of collections to pass to the search
+
+# results = earthaccess.search_data(
+#     concept_id = col_ids,
+#     #cloud_hosted = True,
+#     temporal = date_range,
+#     bounding_box = bbox,
+# )
+```
+
+### Working with `earthaccess` returns  
+
+`earthaccess` provides several convenience methods to help streamline processes that historically have be painful when done using traditional methods. Following the search for data, you'll likely take one of two pathways with those results. You may choose to **download** the assets that have been returned to you or you may choose to continue working with the search results within the Python environment.  
+
+#### Download `earthaccess` results
+
+In some cases you may want to download your assets. `earthaccess` makes downloading the data from the search results very easy using the `earthaccess.download()` function.
+
+```{python}
+downloaded_files = earthaccess.download(
+    results[0:9],
+    local_path='../../2023-Cloud-Workshop-AGU/data',
+)
+```
+
+`earthaccess` did a lot of heavy lifting for us. It identified the downloadable links, passed our Earthdata Login credentials, and save off the file with the proper name. Amazing right!?
+
+We're going to remove those files to keep our space clean.
+
+```{python}
+!rm ../../2023-Cloud-Workshop-AGU/data/*.nc4
+```
+
+#### Explore `earthaccess` search response
+
+```{python}
+print(f'The results variable is a {type(results)} of {type(results[0])}')
+```
+
+```{python}
+len(results)
+```
+
+We can explore the first item (`earthaccess.results.DataGranule`) in our list.
+
+```{python}
+item = results[0]
+type(item)
+```
+
+Each item contains three keys that can be used to explore the item
+
+```{python}
+item.keys()
+```
+
+```{python}
+item['umm']
+```
+
+#### Get data URLs / S3 URIs
+
+Get links to data. The `data_links()` method is used to return the URL(s)/data link(s) for the item. By default the method returns the HTTPS URL to download or access the item.
+
+```{python}
+item.data_links()
+```
+
+The `data_links()` method can also be used to get the s3 URI when we want to perform direct s3 access of the data in the cloud. To get the s3 URI, pass `access = 'direct'` to the method.
+
+```{python}
+item.data_links(access='direct')
+```
+
+If we want to extract all of the data links from our search results and add or save them to a list, we can.
+
+```{python}
+data_link_list = []
+
+for granule in results:
+    for asset in granule.data_links(access='direct'):
+        data_link_list.append(asset)
+        
+```
+
+```{python}
+data_link_list[0:9]
+```
+
+We can pass or read these lists of data links into libraries like `xarray`, `rioxarray`, or `gdal`, but `earthaccess` has a built-in module for easily reading these data links in. 
+
+#### Open results in `xarray`
+
+We use `earthaccess`'s `open()` method to make a connection to and open the files from our search result. 
+
+```{python}
+fileset = earthaccess.open(results)
+```
+
+Then we pass the `fileset` object to xarray.
+
+```{python}
+ds = xr.open_mfdataset(fileset, chunks = {})
+```
+
+Some really cool things just happened here! Not only were we able to seamlessly stream our `earthaccess` search results into a `xarray` `dataset` using the `open_mfdataset()` (multi-file) method, but `earthaccess` determined that we were working from within AWS us-west-2 and accessed the data via direct S3 access! We didn't have to create a session or a filesystem to authenticate and connect to the data. `earthaccess` did this for us using the `auth` object we created at the beginning of this tutorial. If we were not working in AWS us-west-2, `earthaccess` would "automagically" switch to accessing the data via the HTTPS endpoints and would again handle the authentication for us.
+
+Let's take a quick lock at our `xarray` `dataset`
+
+```{python}
+ds
+```
+
+---
+
+## Resources  
+
+- NASA’s [Common Metadata Repository (CMR) API](https://cmr.earthdata.nasa.gov/search/site/docs/search/api.html)   
+- [`earthaccess` repository](https://github.com/nsidc/earthaccess)
+- [`earthaccess` documentation](https://nsidc.github.io/earthaccess/)
+- [Earthdata Search](https://search.earthdata.nasa.gov/search)
+
