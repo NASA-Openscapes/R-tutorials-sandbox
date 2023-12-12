@@ -4,7 +4,7 @@
 
 Repository for converting existing tutorials to Quarto and adding R code
 
-## SET UP
+## SET UP specific for the 2i2c Hub
 
 This is important. The Dockerfile for RStudio has a bug such that it does not set the path correctly so that the Python is in the conda notebook environment. **You only do this once!**
 
