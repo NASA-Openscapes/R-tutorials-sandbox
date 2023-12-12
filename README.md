@@ -1,8 +1,14 @@
 # R-tutorials-sandbox
 
-[Open in 2i2c](https://openscapes.2i2c.cloud/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2FNASA-Openscapes%2FR-tutorials-sandbox&urlpath=rstudio%2Ftree%2FR-tutorials-sandbox%2FREADME.md&branch=main)
+[Open in 2i2c](https://openscapes.2i2c.cloud/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2FNASA-Openscapes%2FR-tutorials-sandbox&urlpath=rstudio&branch=main)
 
 Repository for converting existing tutorials to Quarto and adding R code
+
+## The environments
+
+Python: https://github.com/NASA-Openscapes/corn/blob/main/ci/environment.yml
+
+R: rocker/geospatial:4.2
 
 ## SET UP specific for the 2i2c Hub
 
