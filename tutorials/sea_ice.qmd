@@ -1,0 +1,15 @@
+---
+title: "Sea Ice Concentration"
+---
+
+```{r}
+library(rvest)
+url <- "https://noaadata.apps.nsidc.org/NOAA/G02135/south/daily/geotiff/2023/05_May"
+page <- rvest::read_html(url)
+files <- page %>% html_nodes("a") %>% html_attr("href")
+urls <- paste0(url, files)
+```
+
+```{r}
+sic_urls <- urls |> subset(stringr::str_detect(urls, "concentration"))
+```
