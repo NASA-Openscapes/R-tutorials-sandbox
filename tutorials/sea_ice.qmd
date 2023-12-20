@@ -2,14 +2,24 @@
 title: "Sea Ice Concentration"
 ---
 
+## tif files
+
 ```{r}
 library(rvest)
-url <- "https://noaadata.apps.nsidc.org/NOAA/G02135/south/daily/geotiff/2023/05_May"
+url <- "https://noaadata.apps.nsidc.org/NOAA/G02135/south/daily/geotiff/2023/05_May/"
 page <- rvest::read_html(url)
 files <- page %>% html_nodes("a") %>% html_attr("href")
 urls <- paste0(url, files)
+sic_urls <- urls |> subset(stringr::str_detect(urls, "concentration"))
 ```
 
+## netcdf files
+
 ```{r}
-sic_urls <- urls |> subset(stringr::str_detect(urls, "concentration"))
+library(rvest)
+url = "https://noaadata.apps.nsidc.org/NOAA/G02202_V4/north/daily/1978/"
+page <- rvest::read_html(url)
+files <- page %>% html_nodes("a") %>% html_attr("href")
+urls <- paste0(url, files)
+sic_urls <- urls |> subset(stringr::str_detect(urls, "conc"))
 ```
